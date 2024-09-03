@@ -90,18 +90,18 @@ if [[ "${DASHBOARD_UPDATE}${CLOUDFLARED_UPDATE}${IS_BACKUP}${FORCE_UPDATE}" =~ t
   if [[ "${DASHBOARD_UPDATE}${FORCE_UPDATE}" =~ 'true' ]]; then
     hint "\n Renew dashboard app to $DASHBOARD_LATEST \n"
     wget -O /tmp/dashboard.zip ${GH_PROXY}https://github.com/naiba/nezha/releases/download/$DASHBOARD_LATEST/dashboard-linux-$ARCH.zip
-    unzip /tmp/dashboard.zip -d /tmp
-    if [ -s /tmp/dist/dashboard-linux-$ARCH ]; then
+    unzip -o /tmp/dashboard.zip -d /tmp
+    if [ -s /tmp/dashboard-linux-$ARCH ]; then
       info "\n Restart Nezha Dashboard \n"
       if [ "$IS_DOCKER" = 1 ]; then
         supervisorctl stop nezha >/dev/null 2>&1
         sleep 10
-        mv -f /tmp/dist/dashboard-linux-$ARCH $WORK_DIR/app
+        mv -f /tmp/dashboard-linux-$ARCH $WORK_DIR/app
         supervisorctl start nezha >/dev/null 2>&1
       else
         cmd_systemctl disable >/dev/null 2>&1
         sleep 10
-        mv -f /tmp/dist/dashboard-linux-$ARCH $WORK_DIR/app
+        mv -f /tmp/dashboard-linux-$ARCH $WORK_DIR/app
         cmd_systemctl enable >/dev/null 2>&1
       fi
     fi
