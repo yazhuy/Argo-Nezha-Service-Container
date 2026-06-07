@@ -58,14 +58,23 @@ ABC
 }
 
 # 在本地有不备份标志文件时，不执行备份操作，等待10分钟。触发该标志场景：1. README.md 文件内容包含关键词 backup，2. backup.sh 脚本被手动执行完成后保持 9 分钟。
-if [ -e $NO_ACTION_FLAG* ]; then
-  FLAG_STATUS=$(ls $NO_ACTION_FLAG*)
+if ls "$NO_ACTION_FLAG"* >/dev/null 2>&1; then
+  # 取序号最大的 flag，修正存在多个 flag 的意外情况
+  FLAG_STATUS=$(ls "$NO_ACTION_FLAG"* | sort -V | tail -n 1)
+
+  # 如果存在多个 flag，只保留最大的，其余删除
+  for f in "$NO_ACTION_FLAG"*; do
+    [ "$f" != "$FLAG_STATUS" ] && rm -f "$f"
+  done
+
   WAIT_MINUTE=9
-  if [ "${FLAG_STATUS: -1}" != "$WAIT_MINUTE" ]; then
-    mv -f $FLAG_STATUS $NO_ACTION_FLAG$((${FLAG_STATUS: -1} + 1))
-    error "\n The script is not executed, please wait for $(( WAIT_MINUTE - ${FLAG_STATUS: -1} )) minutes. \n"
+  CUR_MINUTE=${FLAG_STATUS##*[!0-9]}
+
+  if [ "$CUR_MINUTE" -lt "$WAIT_MINUTE" ]; then
+    mv -f "$FLAG_STATUS" "$NO_ACTION_FLAG$((CUR_MINUTE + 1))"
+    error "\n The script is not executed, please wait for $((WAIT_MINUTE - CUR_MINUTE)) minutes. \n"
   else
-    rm -f ${NO_ACTION_FLAG}*
+    rm -f "$NO_ACTION_FLAG"*
   fi
 fi
 
@@ -156,7 +165,7 @@ if [ -e $TEMP_DIR/backup.tar.gz ]; then
   if [ "$IS_DOCKER" = 1 ]; then
     [ $(type -p sqlite3) ] || apt-get -y install sqlite3
     DB_TOKEN=$(sqlite3 ${TEMP_DIR}/${FILE_PATH}data/sqlite.db "select secret from servers where created_at='2023-04-23 13:02:00.770756566+08:00'")
-    [ -n "$DB_TOKEN" ] && LOCAL_TOKEN=$(awk '/nezha-agent -s localhost/{print $NF}' /etc/supervisor/conf.d/damon.conf)
+    [ -n "$DB_TOKEN" ] && LOCAL_TOKEN=$(awk '/nezha-agent -s localhost/{print $(NF-1)}' /etc/supervisor/conf.d/damon.conf)
     [ "$DB_TOKEN" != "$LOCAL_TOKEN" ] && sqlite3 ${TEMP_DIR}/${FILE_PATH}data/sqlite.db "update servers set secret='${LOCAL_TOKEN}' where created_at='2023-04-23 13:02:00.770756566+08:00'"
   fi
 
